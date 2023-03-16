@@ -1,0 +1,10 @@
+1. Check with Moshe:
+	a. Define the requirements of the first experiment
+	b. 
+	
+2. Ideas:
+	a. Schedular for temprature (rising, declining)
+	b. develop connection between Delta T to Delta Confidence
+	c. Check agreement on the level of the distribution (KL)
+	d. Different temp for teacher and student
+    e. not relevant here!!! GAN oscialting with what regard to the period time 

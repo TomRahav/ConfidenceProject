@@ -1,2 +1,2 @@
-# It-s_all_about_confidence
-Deep Learning Research project
+# It's all about the confidence
+Deep learning course end project research oriented

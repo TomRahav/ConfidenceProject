@@ -14,6 +14,9 @@ class BatchResult(NamedTuple):
     agreement_tail: float
     agreement_tail_distribution: float
     student_confidence: float
+    num_per_bin: List[int]
+    acc_per_bin: List[int]
+    conf_per_bin: List[float]
 
 
 class EpochResult(NamedTuple):
@@ -29,6 +32,9 @@ class EpochResult(NamedTuple):
     agreement_tail_list: List[float]
     agreement_tail_list_distribution: List[float]
     student_confidence_list: List[float]
+    num_per_bin: List[int]
+    acc_per_bin: List[int]
+    conf_per_bin: List[float]
 
 class FitResult(NamedTuple):
     """
@@ -44,6 +50,8 @@ class FitResult(NamedTuple):
     train_agree_wrong: List[float]
     train_tail_agreement: List[float]
     train_agreement_tail_distribution: List[float]
+    train_ece: List[float]
+    train_mce: List[float]
     test_loss: List[float]
     test_acc: List[float]
     test_agree: List[float]
@@ -51,3 +59,5 @@ class FitResult(NamedTuple):
     test_tail_agreement: List[float]
     test_agreement_tail_distribution: List[float]
     student_confidence: List[float]
+    test_ece: List[float]
+    test_mce: List[float]

@@ -49,6 +49,8 @@ group.add_argument('--early-stopping', type=int, default=None, metavar='N',
                     help='number of epochs that need to passs without improvment before we stop')
 group.add_argument('--dataset', type=str, default='cifar10', metavar='DATASET',
                     help='(default: "cifar10"')
+group.add_argument('--bins', type=int, default=10, metavar='N',
+                   help='nubmer of bins for ECE and MCE calculation')
 
 # Model parameters
 group = parser.add_argument_group('Model parameters')
@@ -122,6 +124,7 @@ config={
     "teacher_temp": args.teacher_temp,
     "teacher_loss": args.teacher_loss,
     "eta": args.eta,
+    "bins": args.bins,
     })
 
 config = wandb.config
@@ -195,7 +198,7 @@ elif config.teacher_loss == 'distribution':
     loss_fn = DistillationLossDistribution(teacher_temp=config.teacher_temp, student_temp=config.student_temp, alpha = config.eta, beta = 1 - config.eta)
 
 # Define trainer
-trainer = DistillationTrainer(student_classifier, teacher_classifier, loss_fn, optimizer, device, teacher_temp=config.teacher_temp, student_temp=config.student_temp)
+trainer = DistillationTrainer(student_classifier, teacher_classifier, loss_fn, optimizer, device, teacher_temp=config.teacher_temp, student_temp=config.student_temp, bins=config.bins)
 
 res = trainer.fit(dl_train, dl_test, config.epochs, run, checkpoints=config.checkpoint_file, early_stopping=config.early_stopping)
 

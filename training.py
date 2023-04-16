@@ -88,8 +88,18 @@ class Trainer(abc.ABC):
             #  - Use the train/test_epoch methods.
             #  - Save losses and accuracies in the lists above.
             # ====== YOUR CODE: ======
+
+
+
             actual_num_epochs += 1
             train_result = self.train_epoch(dl_train, verbose=verbose, **kw)
+
+            train_mce_calc = abs(train_result.acc_per_bin - train_result.conf_per_bin) 
+            for i in range(bins):
+                if train_result.num_per_bin[i] != 0:
+                    train_mce_calc[i] = train_mce_calc[i] / train_result.num_per_bin[i]
+            train_mce_calc = max(train_mce_calc)
+
             train_loss.append(sum(train_result.losses)/len(train_result.losses))
             train_acc.append(train_result.accuracy)
             train_agree.append(train_result.agreement)
@@ -97,12 +107,18 @@ class Trainer(abc.ABC):
             train_tail_agreement.append(sum(train_result.agreement_tail_list)/len(train_result.agreement_tail_list))
             train_tail_agreement_distribution.append(sum(train_result.agreement_tail_list_distribution)/len(train_result.agreement_tail_list_distribution))
             train_student_confidence.append(sum(train_result.student_confidence_list) / len(train_result.student_confidence_list))
-            train_ece.append(np.sum((np.abs(train_result.acc_per_bin - train_result.conf_per_bin) * train_result.num_per_bin)) / np.sum(train_result.num_per_bin))
-            train_mce.append(np.max(np.abs(train_result.acc_per_bin - train_result.conf_per_bin)))
-            print("Train Epoch Level", train_result.num_per_bin, train_result.acc_per_bin, train_result.conf_per_bin)
+            train_ece.append(sum(abs(train_result.acc_per_bin - train_result.conf_per_bin)) / sum(train_result.num_per_bin))
+            train_mce.append(train_mce_calc)
 
             with torch.no_grad():
                 test_result = self.test_epoch(dl_test, verbose=verbose, **kw)
+
+            test_mce_calc = abs(test_result.acc_per_bin - test_result.conf_per_bin)
+            for i in range(bins):
+                if test_result.num_per_bin[i] != 0:
+                    test_mce_calc[i] = test_mce_calc[i] / test_result.num_per_bin[i]
+            test_mce_calc = max(test_mce_calc)
+
             test_loss.append(sum(test_result.losses)/len(test_result.losses))
             test_acc.append(test_result.accuracy)
             test_agree.append(test_result.agreement)
@@ -110,9 +126,8 @@ class Trainer(abc.ABC):
             test_tail_agreement.append(sum(test_result.agreement_tail_list)/len(test_result.agreement_tail_list))
             test_tail_agreement_distribution.append(sum(test_result.agreement_tail_list_distribution)/len(test_result.agreement_tail_list_distribution))
             test_student_confidence.append(sum(test_result.student_confidence_list) / len(test_result.student_confidence_list))
-            test_ece.append(sum((abs(test_result.acc_per_bin - test_result.conf_per_bin) * test_result.num_per_bin)) / sum(test_result.num_per_bin))
-            test_mce.append(max(abs(test_result.acc_per_bin - test_result.conf_per_bin)))
-            print("Test Epoch Level", test_result.num_per_bin, test_result.acc_per_bin, test_result.conf_per_bin)
+            test_ece.append(sum(abs(test_result.acc_per_bin - test_result.conf_per_bin)) / sum(test_result.num_per_bin))
+            test_mce.append(test_mce_calc)
 
             if run != None:
                 run.log({
@@ -123,8 +138,8 @@ class Trainer(abc.ABC):
                     "Train Tail Agreement Not Distribution": sum(train_result.agreement_tail_list)/len(train_result.agreement_tail_list),
                     "Train Tail Agreement Distribution": sum(train_result.agreement_tail_list_distribution)/len(train_result.agreement_tail_list_distribution),
                     "Train Student Confidence": sum(train_result.student_confidence_list)/len(train_result.student_confidence_list),
-                    "Train ECE": sum((abs(train_result.acc_per_bin - train_result.conf_per_bin) * train_result.num_per_bin)) / sum(train_result.num_per_bin),
-                    "Train MCE": max(abs(train_result.acc_per_bin - train_result.conf_per_bin)),
+                    "Train ECE": sum(abs(train_result.acc_per_bin - train_result.conf_per_bin)) / sum(train_result.num_per_bin),
+                    "Train MCE": train_mce_calc,
                     "Test Loss": sum(test_result.losses)/len(test_result.losses),
                     "Test Accuracy": test_result.accuracy,
                     "Test Agreement": test_result.agreement,
@@ -132,8 +147,8 @@ class Trainer(abc.ABC):
                     "Test Tail Agreement Not Distribution": sum(test_result.agreement_tail_list)/len(test_result.agreement_tail_list),
                     "Test Tail Agreement Distribution": sum(test_result.agreement_tail_list_distribution)/len(test_result.agreement_tail_list_distribution),
                     "Test Student Confidence": sum(test_result.student_confidence_list)/len(test_result.student_confidence_list),
-                    "Test ECE": sum((abs(test_result.acc_per_bin - test_result.conf_per_bin) * test_result.num_per_bin)) / sum(test_result.num_per_bin),
-                    "Test MCE": max(abs(test_result.acc_per_bin - test_result.conf_per_bin))
+                    "Test ECE": sum(abs(test_result.acc_per_bin - test_result.conf_per_bin)) / sum(test_result.num_per_bin),
+                    "Test MCE": test_mce_calc
                     })
             # ========================
 
@@ -385,6 +400,8 @@ class DistillationTrainer(Trainer):
 
         for i in range(len(confidence_per_sample)):
             bin = int(np.floor(confidence_per_sample[i].item()*10))
+            if bin == 10:
+                bin = 9
             num_per_bin[bin] += 1
             acc_per_bin[bin] += student_vs_true[i]
             conf_per_bin[bin] += confidence_per_sample[i]
@@ -398,7 +415,6 @@ class DistillationTrainer(Trainer):
 
         student_vs_true = student_vs_true.cpu()
         student_vs_teacher = student_vs_teacher.cpu()  
-
         # ========================
 
         return BatchResult(batch_loss, num_correct, num_agree, num_agree_wrong, agreement_tail, agreement_tail_distribution, student_confidence, num_per_bin, acc_per_bin, conf_per_bin)
@@ -446,6 +462,8 @@ class DistillationTrainer(Trainer):
 
             for i in range(len(confidence_per_sample)):
                 bin = int(np.floor(confidence_per_sample[i].item()*10))
+                if bin == 10:
+                    bin = 9
                 num_per_bin[bin] += 1
                 acc_per_bin[bin] += student_vs_true[i]
                 conf_per_bin[bin] += confidence_per_sample[i]
